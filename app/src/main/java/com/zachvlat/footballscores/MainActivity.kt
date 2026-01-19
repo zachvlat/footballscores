@@ -7,14 +7,20 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zachvlat.footballscores.data.repository.LiveScoresRepository
@@ -48,42 +54,59 @@ fun LiveScoresScreen() {
     
     var selectedDate by remember { mutableStateOf(viewModel.getTodayDateString()) }
     var showDateDialog by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val keyboardController = LocalSoftwareKeyboardController.current
     
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Live Soccer Scores",
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = formatDateForDisplay(selectedDate),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showDateDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = "Select Date"
-                        )
-                    }
-                    IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            Column {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = "Live Soccer Scores",
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = formatDateForDisplay(selectedDate),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showDateDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Select Date"
+                            )
+                        }
+                        IconButton(onClick = { viewModel.refresh() }) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Refresh"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 )
-            )
+                
+                // Search Bar
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onSearch = { 
+                        keyboardController?.hide()
+                    },
+                    placeholder = "Search teams...",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -97,13 +120,50 @@ fun LiveScoresScreen() {
                 }
                 
                 is LiveScoresUiState.Success -> {
-                    if (state.response.Stages.isEmpty()) {
+                    val filteredStages = if (searchQuery.isBlank()) {
+                        state.response.Stages
+                    } else {
+                        state.response.Stages.map { stage ->
+                            val filteredEvents = stage.Events.filter { event ->
+                                val team1Name = event.T1.firstOrNull()?.Nm?.lowercase() ?: ""
+                                val team2Name = event.T2.firstOrNull()?.Nm?.lowercase() ?: ""
+                                val query = searchQuery.lowercase()
+                                
+                                team1Name.contains(query) || team2Name.contains(query)
+                            }
+                            
+                            // Create new Stage object with filtered events - use all original stage properties
+                            com.zachvlat.footballscores.data.model.Stage(
+                                Sid = stage.Sid ?: "",
+                                Snm = stage.Snm ?: "",
+                                Scd = stage.Scd ?: "",
+                                Cnm = stage.Cnm ?: "",
+                                CnmT = stage.CnmT ?: "",
+                                Csnm = stage.Csnm ?: "",
+                                Ccd = stage.Ccd ?: "",
+                                CompId = stage.CompId ?: "",
+                                CompN = stage.CompN ?: "",
+                                CompUrlName = stage.CompUrlName ?: "",
+                                CompD = stage.CompD ?: "",
+                                CompST = stage.CompST ?: "",
+                                Scu = stage.Scu ?: 0,
+                                badgeUrl = stage.badgeUrl,
+                                firstColor = stage.firstColor ?: "",
+                                Events = filteredEvents
+                            )
+                        }.filter { it.Events.isNotEmpty() }
+                    }
+                    
+                    if (filteredStages.isEmpty()) {
                         EmptyState(
-                            message = "No matches found for selected date",
+                            message = if (searchQuery.isBlank()) 
+                                "No matches found for selected date" 
+                            else 
+                                "No matches found for \"$searchQuery\"",
                             onRefresh = { viewModel.refresh() }
                         )
                     } else {
-                        MatchList(stages = state.response.Stages)
+                        MatchList(stages = filteredStages)
                     }
                 }
                 
@@ -149,6 +209,56 @@ fun MatchList(stages: List<com.zachvlat.footballscores.data.model.Stage>) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        placeholder = {
+            Text(
+                text = placeholder,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(
+                    onClick = { onQueryChange("") }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Clear",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            imeAction = ImeAction.Search
+        ),
+        keyboardActions = KeyboardActions(
+            onSearch = { onSearch(query) }
+        ),
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp)
+    )
 }
 
 @Composable

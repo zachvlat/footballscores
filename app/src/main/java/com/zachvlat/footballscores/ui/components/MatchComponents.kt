@@ -76,8 +76,8 @@ fun MatchCard(event: Event, modifier: Modifier = Modifier) {
 @Composable
 private fun TeamInfo(team: Team, alignment: Alignment.Horizontal) {
     Column(
-        horizontalAlignment = alignment,
-        modifier = Modifier.width(120.dp)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(100.dp)
     ) {
         // Team Logo/Placeholder
         Box(
@@ -110,21 +110,14 @@ private fun TeamInfo(team: Team, alignment: Alignment.Horizontal) {
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Team Name
+        // Team Name - centered with fixed width
         Text(
             text = team.Nm,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            textAlign = if (alignment == Alignment.CenterEnd) TextAlign.End else TextAlign.Start,
-            maxLines = 2
-        )
-        
-        // Team Abbreviation
-        Text(
-            text = team.Abr,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = if (alignment == Alignment.CenterEnd) TextAlign.End else TextAlign.Start
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            modifier = Modifier.width(100.dp)
         )
     }
 }
@@ -145,8 +138,9 @@ private fun ScoreSection(event: Event) {
         }
         
         // Main Score
+        val displayScore = getDisplayScore(event.Tr1, event.Tr2, event.Eps)
         Text(
-            text = "${event.Tr1} - ${event.Tr2}",
+            text = displayScore,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -156,6 +150,19 @@ private fun ScoreSection(event: Event) {
         
         // Match Status
         StatusBadge(status = event.Eps, minutes = event.ErnInf)
+    }
+}
+
+private fun getDisplayScore(tr1: String?, tr2: String?, status: String): String {
+    // Check if scores are null or contain "null" string
+    val team1Score = if (tr1 == null || tr1.equals("null", ignoreCase = true) || tr1.isEmpty()) "0" else tr1
+    val team2Score = if (tr2 == null || tr2.equals("null", ignoreCase = true) || tr2.isEmpty()) "0" else tr2
+    
+    // For matches that haven't started (NS status), show "vs" instead of "0-0"
+    return if (status == "NS" && team1Score == "0" && team2Score == "0") {
+        "vs"
+    } else {
+        "${team1Score} - ${team2Score}"
     }
 }
 
