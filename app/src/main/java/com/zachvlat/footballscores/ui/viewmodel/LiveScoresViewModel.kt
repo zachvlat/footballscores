@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -17,8 +18,15 @@ class LiveScoresViewModel(private val repository: LiveScoresRepository) : ViewMo
     private val _uiState = MutableStateFlow<LiveScoresUiState>(LiveScoresUiState.Loading)
     val uiState: StateFlow<LiveScoresUiState> = _uiState.asStateFlow()
     
+    private val _currentDate = MutableStateFlow(getTodayDateString())
+    val currentDate: StateFlow<String> = _currentDate.asStateFlow()
+    
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    
     init {
         loadTodayScores()
+        startAutoRefresh()
     }
     
     fun loadTodayScores() {
@@ -39,29 +47,46 @@ class LiveScoresViewModel(private val repository: LiveScoresRepository) : ViewMo
     }
     
     fun loadScoresForDate(dateString: String) {
+        _currentDate.value = dateString
+        loadScoresForDateInternal(dateString, showLoading = true)
+    }
+    
+    fun refresh() {
+        loadScoresForDateInternal(_currentDate.value, showLoading = false)
+    }
+    
+    private fun loadScoresForDateInternal(dateString: String, showLoading: Boolean) {
         viewModelScope.launch {
-            _uiState.value = LiveScoresUiState.Loading
+            if (showLoading) {
+                _uiState.value = LiveScoresUiState.Loading
+            } else {
+                _isRefreshing.value = true
+            }
             
             repository.getLiveScoresForDate(dateString).fold(
                 onSuccess = { response ->
                     _uiState.value = LiveScoresUiState.Success(response)
+                    _isRefreshing.value = false
                 },
                 onFailure = { error ->
-                    _uiState.value = LiveScoresUiState.Error(
-                        message = error.message ?: "Failed to load scores for selected date"
-                    )
+                    if (showLoading) {
+                        _uiState.value = LiveScoresUiState.Error(
+                            message = error.message ?: "Failed to load scores for selected date"
+                        )
+                    }
+                    _isRefreshing.value = false
                 }
             )
         }
     }
     
-    fun refresh() {
-        when (val currentState = _uiState.value) {
-            is LiveScoresUiState.Success -> {
-                loadTodayScores()
-            }
-            else -> {
-                loadTodayScores()
+    private fun startAutoRefresh() {
+        viewModelScope.launch {
+            while (true) {
+                delay(60000) // 1 minute
+                if (_currentDate.value == getTodayDateString()) {
+                    refresh()
+                }
             }
         }
     }

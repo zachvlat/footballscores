@@ -22,7 +22,13 @@ data class Stage(
     val badgeUrl: String?,
     val firstColor: String?,
     val Events: List<Event>
-)
+) {
+    fun getCompetitionBadgeUrl(): String? {
+        return badgeUrl?.let { 
+            "https://storage.livescore.com/images/competition/high/$it"
+        }
+    }
+}
 
 data class Event(
     val Eid: String,

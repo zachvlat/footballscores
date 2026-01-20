@@ -17,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
@@ -51,8 +52,9 @@ fun LiveScoresScreen() {
     )
     
     val uiState by viewModel.uiState.collectAsState()
+    val currentDate by viewModel.currentDate.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     
-    var selectedDate by remember { mutableStateOf(viewModel.getTodayDateString()) }
     var showDateDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -67,11 +69,24 @@ fun LiveScoresScreen() {
                                 text = "Live Soccer Scores",
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = formatDateForDisplay(selectedDate),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = formatDateForDisplay(currentDate),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (isRefreshing) {
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "updating...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.alpha(0.7f)
+                                    )
+                                }
+                            }
                         }
                     },
                     actions = {
@@ -81,11 +96,22 @@ fun LiveScoresScreen() {
                                 contentDescription = "Select Date"
                             )
                         }
-                        IconButton(onClick = { viewModel.refresh() }) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh"
-                            )
+                        IconButton(
+                            onClick = { viewModel.refresh() },
+                            enabled = !isRefreshing
+                        ) {
+                            if (isRefreshing) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = "Refresh"
+                                )
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -180,7 +206,6 @@ fun LiveScoresScreen() {
     if (showDateDialog) {
         DateSelectionDialog(
             onDateSelected = { date ->
-                selectedDate = date
                 viewModel.loadScoresForDate(date)
                 showDateDialog = false
             },

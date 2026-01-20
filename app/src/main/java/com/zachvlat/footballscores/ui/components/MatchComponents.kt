@@ -274,31 +274,49 @@ fun CompetitionHeader(stage: Stage) {
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stage.CompN ?: stage.Snm,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            
-            if (!stage.Cnm.isNullOrEmpty() && stage.Cnm != stage.CompN) {
-                Text(
-                    text = stage.Cnm,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+            // Competition Badge
+            val badgeUrl = stage.getCompetitionBadgeUrl()
+            if (badgeUrl != null) {
+                AsyncImage(
+                    model = badgeUrl,
+                    contentDescription = "${stage.CompN ?: stage.Snm} logo",
+                    modifier = Modifier
+                        .size(32.dp)
+                        .padding(end = 12.dp)
                 )
+            } else {
+                Spacer(modifier = Modifier.width(32.dp + 12.dp))
             }
             
-            Text(
-                text = "${stage.Events.size} matches",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
-            )
+            // Competition Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stage.CompN ?: stage.Snm,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                
+                if (!stage.Cnm.isNullOrEmpty() && stage.Cnm != stage.CompN) {
+                    Text(
+                        text = stage.Cnm,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                
+                Text(
+                    text = "${stage.Events.size} matches",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                )
+            }
         }
     }
 }
