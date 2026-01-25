@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import com.zachvlat.footballscores.ui.theme.FootballscoresTheme
 import com.zachvlat.footballscores.ui.viewmodel.LiveScoresUiState
 import com.zachvlat.footballscores.ui.viewmodel.LiveScoresViewModel
 import com.zachvlat.footballscores.ui.viewmodel.LiveScoresViewModelFactory
+import com.zachvlat.footballscores.ui.viewmodel.MatchDetailState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,6 +56,7 @@ fun LiveScoresScreen() {
     val uiState by viewModel.uiState.collectAsState()
     val currentDate by viewModel.currentDate.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val matchDetailState by viewModel.matchDetailState.collectAsState()
     
     var showDateDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -189,7 +192,7 @@ fun LiveScoresScreen() {
                             onRefresh = { viewModel.refresh() }
                         )
                     } else {
-                        MatchList(stages = filteredStages)
+                        MatchList(stages = filteredStages, viewModel)
                     }
                 }
                 
@@ -209,13 +212,54 @@ fun LiveScoresScreen() {
                 viewModel.loadScoresForDate(date)
                 showDateDialog = false
             },
-            onDismiss = { showDateDialog = false }
+            onDismiss = { showDateDialog = false },
+            viewModel = viewModel
         )
+    }
+    
+    // Match Detail Popup
+    when (val state = matchDetailState) {
+        is MatchDetailState.Success -> {
+            MatchDetailPopup(
+                matchDetail = state.matchDetail,
+                onDismiss = { viewModel.dismissMatchDetail() }
+            )
+        }
+        is MatchDetailState.Loading -> {
+            Dialog(onDismissRequest = { viewModel.dismissMatchDetail() }) {
+                Card(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+        }
+        is MatchDetailState.Error -> {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissMatchDetail() },
+                title = { Text("Error") },
+                text = { Text(state.message) },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissMatchDetail() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        else -> { /* Hidden state - do nothing */ }
     }
 }
 
 @Composable
-fun MatchList(stages: List<com.zachvlat.footballscores.data.model.Stage>) {
+fun MatchList(stages: List<com.zachvlat.footballscores.data.model.Stage>, viewModel: LiveScoresViewModel) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp)
@@ -229,7 +273,9 @@ fun MatchList(stages: List<com.zachvlat.footballscores.data.model.Stage>) {
                 
                 // Matches for this competition
                 items(stage.Events) { event ->
-                    MatchCard(event = event)
+                    MatchCard(event = event, onMatchClick = { matchId ->
+                        viewModel.onMatchClick(matchId)
+                    })
                 }
             }
         }
@@ -319,9 +365,9 @@ fun EmptyState(message: String, onRefresh: () -> Unit) {
 @Composable
 fun DateSelectionDialog(
     onDateSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    viewModel: LiveScoresViewModel
 ) {
-    val viewModel = viewModel<LiveScoresViewModel>()
     
     AlertDialog(
         onDismissRequest = onDismiss,

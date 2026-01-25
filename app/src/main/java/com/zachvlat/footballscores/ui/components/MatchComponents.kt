@@ -1,6 +1,7 @@
 package com.zachvlat.footballscores.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,11 +45,12 @@ private fun parseColor(colorString: String): Color {
 }
 
 @Composable
-fun MatchCard(event: Event, modifier: Modifier = Modifier) {
+fun MatchCard(event: Event, onMatchClick: (String) -> Unit = {}, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clickable { onMatchClick(event.Eid) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(

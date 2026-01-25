@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.zachvlat.footballscores.data.model.LiveScoresResponse
+import com.zachvlat.footballscores.data.model.MatchDetailResponse
 import com.zachvlat.footballscores.data.repository.LiveScoresRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +24,12 @@ class LiveScoresViewModel(private val repository: LiveScoresRepository) : ViewMo
     
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    
+    private val _selectedMatchId = MutableStateFlow<String?>(null)
+    val selectedMatchId: StateFlow<String?> = _selectedMatchId.asStateFlow()
+    
+    private val _matchDetailState = MutableStateFlow<MatchDetailState>(MatchDetailState.Hidden)
+    val matchDetailState: StateFlow<MatchDetailState> = _matchDetailState.asStateFlow()
     
     init {
         loadTodayScores()
@@ -109,6 +116,40 @@ class LiveScoresViewModel(private val repository: LiveScoresRepository) : ViewMo
         val dateFormat = SimpleDateFormat("yyyyMMdd", Locale.US)
         return dateFormat.format(calendar.time)
     }
+    
+    fun onMatchClick(matchId: String) {
+        _selectedMatchId.value = matchId
+        loadMatchDetails(matchId)
+    }
+    
+    fun dismissMatchDetail() {
+        _selectedMatchId.value = null
+        _matchDetailState.value = MatchDetailState.Hidden
+    }
+    
+    private fun loadMatchDetails(matchId: String) {
+        viewModelScope.launch {
+            _matchDetailState.value = MatchDetailState.Loading
+            
+            repository.getMatchDetails(matchId).fold(
+                onSuccess = { response ->
+                    _matchDetailState.value = MatchDetailState.Success(response)
+                },
+                onFailure = { error ->
+                    _matchDetailState.value = MatchDetailState.Error(
+                        message = error.message ?: "Failed to load match details"
+                    )
+                }
+            )
+        }
+    }
+}
+
+sealed class MatchDetailState {
+    object Hidden : MatchDetailState()
+    object Loading : MatchDetailState()
+    data class Success(val matchDetail: MatchDetailResponse) : MatchDetailState()
+    data class Error(val message: String) : MatchDetailState()
 }
 
 sealed class LiveScoresUiState {
