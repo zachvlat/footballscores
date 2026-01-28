@@ -56,9 +56,10 @@ data class Event(
     val Pid: Int
 ) {
     fun isLive(): Boolean {
-        return when (Eps.uppercase()) {
+        val epsUpper = Eps.uppercase()
+        return when (epsUpper) {
             "LIVE", "HT", "2H", "1H", "ET", "BT", "P", "AP" -> true
-            else -> false
+            else -> epsUpper.contains("'") || epsUpper.matches(Regex("\\d+'")) || epsUpper.matches(Regex("\\d+\\+\\d+'"))
         }
     }
 }
