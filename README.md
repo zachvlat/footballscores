@@ -1,4 +1,4 @@
-# Football Scores
+# Scorito
 
 <img width="200" alt="image" src="https://github.com/user-attachments/assets/d5775d58-6516-47c4-9c50-a4d35d820df7" />
 
