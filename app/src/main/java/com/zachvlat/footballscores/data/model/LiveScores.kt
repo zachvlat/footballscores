@@ -1,9 +1,32 @@
 package com.zachvlat.footballscores.data.model
 
+import android.util.Log
+
 data class LiveScoresResponse(
     val Ts: Long,
     val Stages: List<Stage>
-)
+) {
+    fun normalizeEvents(): LiveScoresResponse {
+        val normalizedStages = Stages.map { stage ->
+            val eventsWithNulls = stage.Events.filter { it.Eps == null }
+            if (eventsWithNulls.isNotEmpty()) {
+                Log.w("LiveScoresResponse", "Found ${eventsWithNulls.size} events with null Eps in stage ${stage.Snm}")
+            }
+            
+            stage.copy(
+                Events = stage.Events.map { event ->
+                    if (event.Eps == null) {
+                        Log.d("LiveScoresResponse", "Normalizing null Eps for event ${event.Eid}")
+                    }
+                    event.copy(
+                        Eps = event.Eps ?: "NS"
+                    )
+                }
+            )
+        }
+        return copy(Stages = normalizedStages)
+    }
+}
 
 data class Stage(
     val Sid: String,
@@ -17,7 +40,7 @@ data class Stage(
     val CompN: String?,
     val CompUrlName: String?,
     val CompD: String?,
-    val CompST: String,
+    val CompST: String?,
     val Scu: Int,
     val badgeUrl: String?,
     val firstColor: String?,
@@ -42,7 +65,7 @@ data class Event(
     val Tr2OR: String?,
     val T1: List<Team>,
     val T2: List<Team>,
-    val Eps: String,
+    val Eps: String?,
     val Esid: Int,
     val Epr: Int,
     val Ecov: Int,
@@ -56,7 +79,7 @@ data class Event(
     val Pid: Int
 ) {
     fun isLive(): Boolean {
-        val epsUpper = Eps.uppercase()
+        val epsUpper = Eps?.uppercase() ?: return false
         return when (epsUpper) {
             "LIVE", "HT", "2H", "1H", "ET", "BT", "P", "AP" -> true
             else -> epsUpper.contains("'") || epsUpper.matches(Regex("\\d+'")) || epsUpper.matches(Regex("\\d+\\+\\d+'"))

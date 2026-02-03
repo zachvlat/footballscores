@@ -3,6 +3,7 @@ package com.zachvlat.footballscores.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -143,7 +144,7 @@ private fun ScoreSection(event: Event) {
         }
         
         // Main Score
-        val displayScore = getDisplayScore(event.Tr1, event.Tr2, event.Eps)
+        val displayScore = getDisplayScore(event.Tr1, event.Tr2, event.Eps ?: "NS")
         Text(
             text = displayScore,
             style = MaterialTheme.typography.headlineMedium,
@@ -154,7 +155,8 @@ private fun ScoreSection(event: Event) {
         Spacer(modifier = Modifier.height(4.dp))
         
         // Match Status
-        StatusBadge(status = event.Eps, minutes = event.Eps, startTime = event.Esd)
+        val safeStatus = remember { event.Eps ?: "NS" }
+        StatusBadge(status = safeStatus, minutes = safeStatus, startTime = event.Esd)
     }
 }
 
@@ -196,8 +198,8 @@ private fun getDisplayScore(tr1: String?, tr2: String?, status: String): String 
 }
 
 @Composable
-private fun StatusBadge(status: String, minutes: String?, startTime: Long?) {
-    val (statusText, color) = when (status) {
+private fun StatusBadge(status: String?, minutes: String?, startTime: Long?) {
+    val (statusText, color) = when (status ?: "NS") {
         "FT" -> "FT" to Color.Gray
         "AET" -> "AET" to Color.Gray
         "HT" -> "HT" to Color.Magenta

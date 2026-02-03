@@ -51,7 +51,8 @@ class LiveScoresRepository {
             val url = LiveScoresApi.getTodayUrl()
             Log.d("LiveScoresRepository", "Fetching URL: $url")
             val response = api.getLiveScores(url)
-            Result.success(response)
+            val normalizedResponse = response.normalizeEvents()
+            Result.success(normalizedResponse)
         } catch (e: Exception) {
             Log.e("LiveScoresRepository", "Error fetching live scores", e)
             Result.failure(e)
@@ -63,7 +64,8 @@ class LiveScoresRepository {
             val url = LiveScoresApi.getUrlForDateString(dateString)
             Log.d("LiveScoresRepository", "Fetching URL: $url")
             val response = api.getLiveScores(url)
-            Result.success(response)
+            val normalizedResponse = response.normalizeEvents()
+            Result.success(normalizedResponse)
         } catch (e: Exception) {
             Log.e("LiveScoresRepository", "Error fetching live scores for date: $dateString", e)
             Result.failure(e)

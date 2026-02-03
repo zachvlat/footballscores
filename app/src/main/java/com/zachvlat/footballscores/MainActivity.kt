@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Refresh
@@ -51,6 +53,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen() {
     val pagerState = rememberPagerState(pageCount = { 2 })
     val tabs = listOf("⚽ Soccer", "🏀 Basketball")
+    val scope = rememberCoroutineScope()
     
     LaunchedEffect(pagerState.currentPage) {
         // Sync tabs with pager
@@ -88,7 +91,9 @@ fun MainScreen() {
                     Tab(
                         selected = pagerState.currentPage == index,
                         onClick = { 
-                            // No-op - swipe gestures handle navigation
+                            scope.launch {
+                                pagerState.animateScrollToPage(index)
+                            }
                         },
                         text = { 
                             Text(
@@ -533,8 +538,8 @@ fun BasketballScoresScreen() {
         // Search and Filter Bar
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shadowElevation = 1.dp
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 0.dp
         ) {
             Column(
                 modifier = Modifier
