@@ -65,14 +65,14 @@ fun MatchCard(event: Event, onMatchClick: (String) -> Unit = {}, modifier: Modif
         ) {
             // Team 1
             TeamInfo(team = event.T1.first(), alignment = Alignment.End)
-            
+
             Spacer(modifier = Modifier.width(16.dp))
-            
+
             // Score Section
             ScoreSection(event = event)
-            
+
             Spacer(modifier = Modifier.width(16.dp))
-            
+
             // Team 2
             TeamInfo(team = event.T2.first(), alignment = Alignment.Start)
         }
@@ -113,9 +113,9 @@ private fun TeamInfo(team: Team, alignment: Alignment.Horizontal) {
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         // Team Name - centered with fixed width
         Text(
             text = team.Nm,
@@ -142,7 +142,7 @@ private fun ScoreSection(event: Event) {
             )
             Spacer(modifier = Modifier.height(4.dp))
         }
-        
+
         // Main Score
         val displayScore = getDisplayScore(event.Tr1, event.Tr2, event.Eps ?: "NS")
         Text(
@@ -151,9 +151,9 @@ private fun ScoreSection(event: Event) {
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
-        
+
         Spacer(modifier = Modifier.height(4.dp))
-        
+
         // Match Status
         val safeStatus = remember { event.Eps ?: "NS" }
         StatusBadge(status = safeStatus, minutes = safeStatus, startTime = event.Esd)
@@ -199,7 +199,7 @@ private fun getDisplayScore(tr1: String?, tr2: String?, status: String): String 
 
 @Composable
 private fun StatusBadge(status: String?, minutes: String?, startTime: Long?) {
-    val (statusText, color) = when (status ?: "NS") {
+val (statusText, color) = when (status?.uppercase() ?: "NS") {
         "FT" -> "FT" to Color.Gray
         "AET" -> "AET" to Color.Gray
         "HT" -> "HT" to Color.Magenta
@@ -209,10 +209,14 @@ private fun StatusBadge(status: String?, minutes: String?, startTime: Long?) {
             timeText to Color.Blue
         }
         else -> {
-            // Live match with minutes
-            val liveMinutes = minutes?.let { 
-                if (it.endsWith("'")) it else "${it}'" 
-            } ?: status
+            // Live match with minutes - check if it contains minutes (like "33'")
+            val liveMinutes = if (status?.contains("'") == true) {
+                status
+            } else {
+                minutes?.let { 
+                    if (it.endsWith("'")) it else "${it}'" 
+                } ?: status
+            }
             liveMinutes to Color.Green
         }
     }
@@ -299,7 +303,7 @@ fun CompetitionHeader(stage: Stage) {
             } else {
                 Spacer(modifier = Modifier.width(32.dp + 12.dp))
             }
-            
+
             // Competition Info
             Column(modifier = Modifier.weight(1f)) {
                  Text(
@@ -308,7 +312,7 @@ fun CompetitionHeader(stage: Stage) {
                      fontWeight = FontWeight.Bold,
                      color = MaterialTheme.colorScheme.onSurfaceVariant
                  )
-                 
+
                  if (!stage.Cnm.isNullOrEmpty() && stage.Cnm != stage.CompN) {
                      Text(
                          text = stage.Cnm,
@@ -316,7 +320,7 @@ fun CompetitionHeader(stage: Stage) {
                          color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                      )
                  }
-                 
+
                  Text(
                      text = "${stage.Events.size} matches",
                      style = MaterialTheme.typography.bodySmall,
