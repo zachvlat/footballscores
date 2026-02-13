@@ -130,11 +130,13 @@ private fun TeamInfo(team: Team, alignment: Alignment.Horizontal) {
 
 @Composable
 private fun ScoreSection(event: Event) {
+    val isCricket = isCricketMatch(event)
+    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Halftime Score if available
-        if (!event.Trh1.isNullOrEmpty() && !event.Trh2.isNullOrEmpty()) {
+        if (!isCricket && !event.Trh1.isNullOrEmpty() && !event.Trh2.isNullOrEmpty()) {
             Text(
                 text = "HT: ${event.Trh1}-${event.Trh2}",
                 style = MaterialTheme.typography.bodySmall,
@@ -144,19 +146,93 @@ private fun ScoreSection(event: Event) {
         }
 
         // Main Score
-        val displayScore = getDisplayScore(event.Tr1, event.Tr2, event.Eps ?: "NS")
-        Text(
-            text = displayScore,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        if (isCricket) {
+            CricketScoreDisplay(event)
+        } else {
+            val displayScore = getDisplayScore(event)
+            Text(
+                text = displayScore,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            StatusBadge(status = event.Eps ?: "NS", minutes = event.Eps ?: "NS", startTime = event.Esd, esid = event.Esid)
+        }
+    }
+}
 
+@Composable
+private fun CricketScoreDisplay(event: Event) {
+    val team1Runs = event.Tr1C1 ?: 0
+    val team1Wickets = event.Tr1CW1 ?: 0
+    val team1Overs = event.Tr1CO1 ?: 0.0
+    val team2Runs = event.Tr2C1 ?: 0
+    val team2Wickets = event.Tr2CW1 ?: 0
+    val team2Overs = event.Tr2CO1 ?: 0.0
+    
+    val team1Name = event.T1.firstOrNull()?.Abr ?: "T1"
+    val team2Name = event.T2.firstOrNull()?.Abr ?: "T2"
+    
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Commentary if available
+        if (!event.ECo.isNullOrEmpty()) {
+            Text(
+                text = event.ECo,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 2,
+                modifier = Modifier.width(140.dp),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+        
+        // Team 2 score (usually the batting team)
+        if (team2Runs > 0) {
+            Text(
+                text = "$team2Name: ${team2Runs}/${team2Wickets}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "(${formatOvers(team2Overs)})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        // Team 1 score
+        if (team1Runs > 0) {
+            if (team2Runs > 0) Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "$team1Name: ${team1Runs}/${team1Wickets}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "(${formatOvers(team1Overs)})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        if (team1Runs == 0 && team2Runs == 0) {
+            Text(
+                text = "vs",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        
         Spacer(modifier = Modifier.height(4.dp))
-
-        // Match Status
-        val safeStatus = remember { event.Eps ?: "NS" }
-        StatusBadge(status = safeStatus, minutes = safeStatus, startTime = event.Esd)
+        
+        // Status
+        val safeStatus = event.Eps ?: "NS"
+        StatusBadge(status = safeStatus, minutes = safeStatus, startTime = event.Esd, esid = event.Esid)
     }
 }
 
@@ -184,12 +260,37 @@ private fun formatStartTime(timestamp: Long): String {
     }
 }
 
-private fun getDisplayScore(tr1: String?, tr2: String?, status: String): String {
-    // Check if scores are null or contain "null" string
+private fun getDisplayScore(event: Event): String {
+    val isCricket = event.Tr1C1 != null
+    
+    if (isCricket) {
+        val team1Runs = event.Tr1C1 ?: 0
+        val team1Wickets = event.Tr1CW1 ?: 0
+        val team1Overs = event.Tr1CO1 ?: 0.0
+        val team2Runs = event.Tr2C1 ?: 0
+        val team2Wickets = event.Tr2CW1 ?: 0
+        val team2Overs = event.Tr2CO1 ?: 0.0
+        
+        // Show both innings scores if available
+        val team1Score = if (team1Runs > 0) "${team1Runs}/${team1Wickets} (${formatOvers(team1Overs)})" else null
+        val team2Score = if (team2Runs > 0) "${team2Runs}/${team2Wickets} (${formatOvers(team2Overs)})" else null
+        
+        return when {
+            team1Score != null && team2Score != null -> "$team1Score | $team2Score"
+            team2Score != null -> "$team2Score"
+            team1Score != null -> "$team1Score"
+            else -> "vs"
+        }
+    }
+    
+    // Football/Basketball format
+    val tr1 = event.Tr1
+    val tr2 = event.Tr2
+    val status = event.Eps ?: "NS"
+    
     val team1Score = if (tr1 == null || tr1.equals("null", ignoreCase = true) || tr1.isEmpty()) "0" else tr1
     val team2Score = if (tr2 == null || tr2.equals("null", ignoreCase = true) || tr2.isEmpty()) "0" else tr2
     
-    // For matches that haven't started (NS status), show "vs" instead of "0-0"
     return if (status == "NS" && team1Score == "0" && team2Score == "0") {
         "vs"
     } else {
@@ -197,27 +298,41 @@ private fun getDisplayScore(tr1: String?, tr2: String?, status: String): String 
     }
 }
 
+private fun isCricketMatch(event: Event): Boolean = event.Tr1C1 != null
+
+private fun formatOvers(overs: Double): String {
+    if (overs == 0.0) return "0 ov"
+    val wholeOvers = overs.toInt()
+    val balls = ((overs - wholeOvers) * 10).toInt()
+    return if (balls > 0) "$wholeOvers.$balls ov" else "$wholeOvers ov"
+}
+
 @Composable
-private fun StatusBadge(status: String?, minutes: String?, startTime: Long?) {
-val (statusText, color) = when (status?.uppercase() ?: "NS") {
-        "FT" -> "FT" to Color.Gray
-        "AET" -> "AET" to Color.Gray
-        "HT" -> "HT" to Color.Magenta
-        "NS" -> {
-            // Show kickoff time for matches that haven't started
+private fun StatusBadge(status: String?, minutes: String?, startTime: Long?, esid: Int = 0) {
+    val (statusText, color) = when {
+        esid == 33 -> "LIVE" to Color.Green
+        esid == 1 && status?.uppercase() == "NS" -> {
             val timeText = startTime?.let { formatStartTime(it) } ?: "NS"
             timeText to Color.Blue
         }
-        else -> {
-            // Live match with minutes - check if it contains minutes (like "33'")
-            val liveMinutes = if (status?.contains("'") == true) {
-                status
-            } else {
-                minutes?.let { 
-                    if (it.endsWith("'")) it else "${it}'" 
-                } ?: status
+        else -> when (status?.uppercase() ?: "NS") {
+            "FT" -> "FT" to Color.Gray
+            "AET" -> "AET" to Color.Gray
+            "HT" -> "HT" to Color.Magenta
+            "NS" -> {
+                val timeText = startTime?.let { formatStartTime(it) } ?: "NS"
+                timeText to Color.Blue
             }
-            liveMinutes to Color.Green
+            else -> {
+                val liveMinutes = if (status?.contains("'") == true) {
+                    status
+                } else {
+                    minutes?.let { 
+                        if (it.endsWith("'")) it else "${it}'" 
+                    } ?: status
+                }
+                liveMinutes to Color.Green
+            }
         }
     }
     

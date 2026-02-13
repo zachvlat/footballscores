@@ -4,6 +4,7 @@ import android.util.Log
 import com.zachvlat.footballscores.data.api.LiveScoresApi
 import com.zachvlat.footballscores.data.api.MatchDetailApi
 import com.zachvlat.footballscores.data.api.BasketballApi
+import com.zachvlat.footballscores.data.api.CricketApi
 import com.zachvlat.footballscores.data.model.LiveScoresResponse
 import com.zachvlat.footballscores.data.model.MatchDetailResponse
 import okhttp3.OkHttpClient
@@ -16,6 +17,7 @@ class LiveScoresRepository {
     
     private val api: LiveScoresApi
     private val basketballApi: BasketballApi
+    private val cricketApi: CricketApi
     private val matchDetailApi: MatchDetailApi
     
     init {
@@ -43,6 +45,7 @@ class LiveScoresRepository {
         
         api = retrofit.create(LiveScoresApi::class.java)
         basketballApi = retrofit.create(BasketballApi::class.java)
+        cricketApi = retrofit.create(CricketApi::class.java)
         matchDetailApi = matchDetailRetrofit.create(MatchDetailApi::class.java)
     }
     
@@ -92,6 +95,30 @@ class LiveScoresRepository {
             Result.success(response)
         } catch (e: Exception) {
             Log.e("LiveScoresRepository", "Error fetching basketball scores for date: $dateString", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getTodayCricketScores(): Result<LiveScoresResponse> {
+        return try {
+            val url = CricketApi.getTodayUrl()
+            Log.d("LiveScoresRepository", "Fetching cricket URL: $url")
+            val response = cricketApi.getCricketScores(url)
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e("LiveScoresRepository", "Error fetching cricket scores", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getCricketScoresForDate(dateString: String): Result<LiveScoresResponse> {
+        return try {
+            val url = CricketApi.getUrlForDateString(dateString)
+            Log.d("LiveScoresRepository", "Fetching cricket URL: $url")
+            val response = cricketApi.getCricketScores(url)
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e("LiveScoresRepository", "Error fetching cricket scores for date: $dateString", e)
             Result.failure(e)
         }
     }

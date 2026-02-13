@@ -48,7 +48,10 @@ data class Stage(
 ) {
     fun getCompetitionBadgeUrl(): String? {
         return badgeUrl?.let { 
-            "https://storage.livescore.com/images/competition/high/$it"
+            when {
+                it.contains("cricket", ignoreCase = true) -> "https://prod-cdn-static.livescore.com/web/static/images/competitions/1/$it"
+                else -> "https://storage.livescore.com/images/competition/high/$it"
+            }
         }
     }
 }
@@ -63,6 +66,12 @@ data class Event(
     val Trh2: String?,
     val Tr1OR: String?,
     val Tr2OR: String?,
+    val Tr1C1: Int?,
+    val Tr1CW1: Int?,
+    val Tr1CO1: Double?,
+    val Tr2C1: Int?,
+    val Tr2CW1: Int?,
+    val Tr2CO1: Double?,
     val T1: List<Team>,
     val T2: List<Team>,
     val Eps: String?,
@@ -76,9 +85,14 @@ data class Event(
     val EO: Long,
     val EOX: Long,
     val Spid: Int,
-    val Pid: Int
+    val Pid: Int,
+    val ECo: String?,
+    val Ebat: Int?,
+    val TPa: Int?,
+    val TCho: Int?
 ) {
     fun isLive(): Boolean {
+        if (Esid == 33) return true
         val epsUpper = Eps?.uppercase() ?: return false
         return when (epsUpper) {
             "LIVE", "HT", "2H", "1H", "ET", "BT", "P", "AP" -> true
@@ -98,10 +112,10 @@ data class Team(
 ) {
     fun getTeamImageUrl(): String? {
         return Img?.let { 
-            if (it.startsWith("enet")) {
-                "https://storage.livescore.com/images/team/high/$it"
-            } else {
-                it
+            when {
+                it.startsWith("enet") -> "https://storage.livescore.com/images/team/high/$it"
+                it.contains("---cricket") -> "https://prod-cdn-static.livescore.com/web/static/images/team_badges/1/$it"
+                else -> it
             }
         }
     }

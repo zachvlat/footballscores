@@ -43,7 +43,8 @@ import com.zachvlat.footballscores.ui.viewmodel.*
 
 enum class SportType(val displayName: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     SOCCER("Football", Icons.Default.Search),
-    BASKETBALL("Basketball", Icons.Default.Refresh)
+    BASKETBALL("Basketball", Icons.Default.Refresh),
+    CRICKET("Cricket", Icons.Default.DateRange)
 }
 
 class MainActivity : ComponentActivity() {
@@ -128,6 +129,7 @@ fun MainScreen() {
                 when (selectedSport) {
                     SportType.SOCCER -> SportScreen(sportType = SportType.SOCCER)
                     SportType.BASKETBALL -> SportScreen(sportType = SportType.BASKETBALL)
+                    SportType.CRICKET -> SportScreen(sportType = SportType.CRICKET)
                 }
             }
         }
@@ -169,7 +171,27 @@ fun SportScreen(sportType: SportType) {
                 currentDate = viewModel.currentDate.collectAsState().value,
                 isRefreshing = viewModel.isRefreshing.collectAsState().value,
                 uiState = viewModel.uiState.collectAsState().value,
-                matchDetailState = null, // Basketball doesn't have match detail state
+                matchDetailState = null,
+                onRefresh = { viewModel.refresh() },
+                onLoadScoresForDate = { viewModel.loadScoresForDate(it) },
+                onDismissMatchDetail = { },
+                getTodayDateString = { viewModel.getTodayDateString() },
+                getYesterdayDateString = { viewModel.getYesterdayDateString() },
+                getTomorrowDateString = { viewModel.getTomorrowDateString() }
+            )
+        }
+        SportType.CRICKET -> {
+            val repository = remember { LiveScoresRepository() }
+            val viewModel: CricketViewModel = viewModel(
+                factory = CricketViewModelFactory(repository)
+            )
+            SportContent(
+                sportType = sportType,
+                viewModel = viewModel,
+                currentDate = viewModel.currentDate.collectAsState().value,
+                isRefreshing = viewModel.isRefreshing.collectAsState().value,
+                uiState = viewModel.uiState.collectAsState().value,
+                matchDetailState = null,
                 onRefresh = { viewModel.refresh() },
                 onLoadScoresForDate = { viewModel.loadScoresForDate(it) },
                 onDismissMatchDetail = { },
@@ -510,6 +532,83 @@ fun SportContent(
                             }
                         }
                         is BasketballUiState.Error -> {
+                            ErrorMessage(
+                                message = uiState.message,
+                                onRefresh = onRefresh
+                            )
+                        }
+                    }
+                }
+                is CricketUiState -> {
+                    when (uiState) {
+                        is CricketUiState.Loading -> {
+                            LoadingIndicator()
+                        }
+                        is CricketUiState.Success -> {
+                            val filteredStages = uiState.response.Stages.map { stage ->
+                                var filteredEvents = stage.Events
+                                
+                                if (searchQuery.isNotBlank()) {
+                                    filteredEvents = filteredEvents.filter { event ->
+                                        val team1Name = event.T1.firstOrNull()?.Nm?.lowercase() ?: ""
+                                        val team2Name = event.T2.firstOrNull()?.Nm?.lowercase() ?: ""
+                                        val competitionName = stage.Snm?.lowercase() ?: ""
+                                        val competitionFullName = stage.CompN?.lowercase() ?: ""
+                                        val query = searchQuery.lowercase()
+                                        
+                                        team1Name.contains(query) || 
+                                        team2Name.contains(query) ||
+                                        competitionName.contains(query) ||
+                                        competitionFullName.contains(query)
+                                    }
+                                }
+                                
+                                if (showLiveOnly) {
+                                    filteredEvents = filteredEvents.filter { event ->
+                                        event.isLive()
+                                    }
+                                }
+                                
+                                com.zachvlat.footballscores.data.model.Stage(
+                                    Sid = stage.Sid ?: "",
+                                    Snm = stage.Snm ?: "",
+                                    Scd = stage.Scd ?: "",
+                                    Cnm = stage.Cnm ?: "",
+                                    CnmT = stage.CnmT ?: "",
+                                    Csnm = stage.Csnm ?: "",
+                                    Ccd = stage.Ccd ?: "",
+                                    CompId = stage.CompId ?: "",
+                                    CompN = stage.CompN ?: "",
+                                    CompUrlName = stage.CompUrlName ?: "",
+                                    CompD = stage.CompD ?: "",
+                                    CompST = stage.CompST ?: "",
+                                    Scu = stage.Scu ?: 0,
+                                    badgeUrl = stage.badgeUrl,
+                                    firstColor = stage.firstColor ?: "",
+                                    Events = filteredEvents
+                                )
+                            }.filter { it.Events.isNotEmpty() }
+                            
+                            if (filteredStages.isEmpty()) {
+                                val message = when {
+                                    showLiveOnly && searchQuery.isNotBlank() -> 
+                                        "No live ${sportType.displayName.lowercase()} matches found for \"${searchQuery}\""
+                                    showLiveOnly -> 
+                                        "No live ${sportType.displayName.lowercase()} matches found for selected date"
+                                    searchQuery.isNotBlank() -> 
+                                        "No ${sportType.displayName.lowercase()} matches found for \"${searchQuery}\""
+                                    else -> 
+                                        "No ${sportType.displayName.lowercase()} matches found for selected date"
+                                }
+                                EmptyState(
+                                    message = message,
+                                    onRefresh = onRefresh
+                                )
+                            } else {
+                                MatchList(stages = filteredStages, viewModel as CricketViewModel)
+                            }
+                        }
+                        is CricketUiState.Error -> {
                             ErrorMessage(
                                 message = uiState.message,
                                 onRefresh = onRefresh
