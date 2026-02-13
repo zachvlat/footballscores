@@ -95,7 +95,7 @@ data class Event(
         if (Esid == 33) return true
         val epsUpper = Eps?.uppercase() ?: return false
         return when (epsUpper) {
-            "LIVE", "HT", "2H", "1H", "ET", "BT", "P", "AP" -> true
+            "LIVE", "HT", "2H", "1H", "ET", "BT", "P" -> true
             else -> epsUpper.contains("'") || epsUpper.matches(Regex("\\d+'")) || epsUpper.matches(Regex("\\d+\\+\\d+'"))
         }
     }

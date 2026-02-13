@@ -5,6 +5,7 @@ import com.zachvlat.footballscores.data.api.LiveScoresApi
 import com.zachvlat.footballscores.data.api.MatchDetailApi
 import com.zachvlat.footballscores.data.api.BasketballApi
 import com.zachvlat.footballscores.data.api.CricketApi
+import com.zachvlat.footballscores.data.api.HockeyApi
 import com.zachvlat.footballscores.data.model.LiveScoresResponse
 import com.zachvlat.footballscores.data.model.MatchDetailResponse
 import okhttp3.OkHttpClient
@@ -18,6 +19,7 @@ class LiveScoresRepository {
     private val api: LiveScoresApi
     private val basketballApi: BasketballApi
     private val cricketApi: CricketApi
+    private val hockeyApi: HockeyApi
     private val matchDetailApi: MatchDetailApi
     
     init {
@@ -46,6 +48,7 @@ class LiveScoresRepository {
         api = retrofit.create(LiveScoresApi::class.java)
         basketballApi = retrofit.create(BasketballApi::class.java)
         cricketApi = retrofit.create(CricketApi::class.java)
+        hockeyApi = retrofit.create(HockeyApi::class.java)
         matchDetailApi = matchDetailRetrofit.create(MatchDetailApi::class.java)
     }
     
@@ -119,6 +122,30 @@ class LiveScoresRepository {
             Result.success(response)
         } catch (e: Exception) {
             Log.e("LiveScoresRepository", "Error fetching cricket scores for date: $dateString", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getTodayHockeyScores(): Result<LiveScoresResponse> {
+        return try {
+            val url = HockeyApi.getTodayUrl()
+            Log.d("LiveScoresRepository", "Fetching hockey URL: $url")
+            val response = hockeyApi.getHockeyScores(url)
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e("LiveScoresRepository", "Error fetching hockey scores", e)
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getHockeyScoresForDate(dateString: String): Result<LiveScoresResponse> {
+        return try {
+            val url = HockeyApi.getUrlForDateString(dateString)
+            Log.d("LiveScoresRepository", "Fetching hockey URL: $url")
+            val response = hockeyApi.getHockeyScores(url)
+            Result.success(response)
+        } catch (e: Exception) {
+            Log.e("LiveScoresRepository", "Error fetching hockey scores for date: $dateString", e)
             Result.failure(e)
         }
     }

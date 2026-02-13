@@ -318,6 +318,7 @@ private fun StatusBadge(status: String?, minutes: String?, startTime: Long?, esi
         else -> when (status?.uppercase() ?: "NS") {
             "FT" -> "FT" to Color.Gray
             "AET" -> "AET" to Color.Gray
+            "AP" -> "AP" to Color.Gray
             "HT" -> "HT" to Color.Magenta
             "NS" -> {
                 val timeText = startTime?.let { formatStartTime(it) } ?: "NS"
