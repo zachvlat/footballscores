@@ -1,0 +1,12 @@
+Scorito
+
+A modern Android app for tracking live match scores and match results.
+
+<h3>Features</h3>
+<ul>
+<li>Real-time match scores and live status updates</li>
+<li>Team/Competition search functionality to filter matches by team names</li>
+<li>Date navigation (today, yesterday, tomorrow)</li>
+<li>Matches organized by competition/league</li>
+<li>Match details including team logos, scores, and status</li>
+</ul>
