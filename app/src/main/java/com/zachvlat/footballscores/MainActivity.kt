@@ -410,19 +410,23 @@ fun SportContent(
                             val filteredStages = uiState.response.Stages.map { stage ->
                                 var filteredEvents = stage.Events
                                 
-                                // Apply search filter (teams + competitions)
+                                // Apply search filter (teams + competitions + country)
                                 if (searchQuery.isNotBlank()) {
                                     filteredEvents = filteredEvents.filter { event ->
                                         val team1Name = event.T1.firstOrNull()?.Nm?.lowercase() ?: ""
                                         val team2Name = event.T2.firstOrNull()?.Nm?.lowercase() ?: ""
                                         val competitionName = stage.Snm?.lowercase() ?: ""
                                         val competitionFullName = stage.CompN?.lowercase() ?: ""
+                                        val countryName = stage.Cnm?.lowercase() ?: ""
+                                        val countryShortName = stage.Csnm?.lowercase() ?: ""
                                         val query = searchQuery.lowercase()
                                         
                                         team1Name.contains(query) || 
                                         team2Name.contains(query) ||
                                         competitionName.contains(query) ||
-                                        competitionFullName.contains(query)
+                                        competitionFullName.contains(query) ||
+                                        countryName.contains(query) ||
+                                        countryShortName.contains(query)
                                     }
                                 }
                                 
